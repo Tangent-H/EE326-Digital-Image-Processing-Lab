@@ -10,7 +10,7 @@ Keywords: nearest neighbor interpolation; bilinear interpolation; bicubic interp
 
 ## 2.1 Nearest Neighbor Interpolation
 
-Nearest neighbor interpolation is perhaps the most straightforward and also the fastest interpolation method.  The most important part of the nearest neighbor interpolation is pixel mapping. As shown in figure \ref{}, the index of the interpolated image (in brown) can be mapped into the index of the original image (in green). **Note that the grid points represent pixels.**
+Nearest neighbor interpolation is perhaps the most straightforward and also the fastest interpolation method.  The most important part of the nearest neighbor interpolation is pixel mapping. As shown in figure ref, the index of the interpolated image (in brown) can be mapped into the index of the original image (in green). **Note that the grid points represent pixels.**
 
 ![nearest_mapping](./assets/nearest_mapping.jpg)
 
@@ -26,7 +26,7 @@ As for the value assignment for the interpolated image, consider the following p
 
 Bilinear interpolation is a better choice of image interpolation method if we want the interpolated image to be smooth rather than edgy. The naive method for bilinear interpolation is that we can first interpolate along one of the axes and then interpolate along the other.
 
-The basic method is shown in figure \ref{}.
+The basic method is shown in figure ref.
 
 1. Interpolate along the y-axis to obtain the intermediate value of the grid points marked `x` in purple.
 2. Then interpolate along the x-axis to obtain the exact value of the grid points of the interpolated image.
@@ -37,7 +37,7 @@ The basic method is shown in figure \ref{}.
 
 Suppose we delve deeper into the pixel assignment of the interpolated image. In that case, we can find out that the pixel’s value of the interpolated image only associates with the four neighbors of the original image. So, we may ask, since it is bilinear, is there a way to assign an interpolated pixel with only the weighted values of those four neighbors? The answer is yes.
 
-As shown in Figure \ref{}, we can use the formula in this figure to obtain the exact value of the interpolated pixel directly from the four neighbors. Parameters `m` and `n` can be easily derived from the mapped indexes of interpolated pixels.
+As shown in Figure ref, we can use the formula in this figure to obtain the exact value of the interpolated pixel directly from the four neighbors. Parameters `m` and `n` can be easily derived from the mapped indexes of interpolated pixels.
 
 ![bilinear_mapping_fast](./assets/bilinear_mapping_fast.jpg)
 
@@ -45,7 +45,7 @@ As shown in Figure \ref{}, we can use the formula in this figure to obtain the e
 
 Bicubic interpolation is the most difficult of the three interpolation methods. The hardest part is that we need at most $4\times4=16$​ pixels from the original image to obtain only one pixel of the interpolated image. We also need to consider that there are not enough pixels from the original image at the edge of the interpolated image for us to do cubic regression. My solution is as follows, though it may seem inefficient.
 
-As shown in Figure \ref{}, to obtain the pixel value of the center pixel marked `o`, we need first to use cubic regression to interpolate the intermediate pixel values marked `x` along the y-axis, then use these intermediate pixel values to interpolate along the x-axis.
+As shown in Figure ref, to obtain the pixel value of the center pixel marked `o`, we need first to use cubic regression to interpolate the intermediate pixel values marked `x` along the y-axis, then use these intermediate pixel values to interpolate along the x-axis.
 
 ![bicubic_mapping](./assets/bicubic_mapping.jpg)
 
@@ -53,7 +53,7 @@ As for the pixels close to the image edges, I flip the image along the edges to 
 
 # 3 Experiment
 
-Note: The testing image for this section is Figure \ref{}.
+Note: The testing image for this section is Figure ref.
 
 ![rice_original](./assets/rice_original.jpg)
 
@@ -93,7 +93,7 @@ y1 = y * (img.shape[1]-1) / (dim[1] - 1)
 
 Since the `round()` function in `Python` is already searching for the nearest integer, we need not write another function to do this.
 
-The output image of the nearest neighbor interpolation looks something like Figure \ref{}.
+The output image of the nearest neighbor interpolation looks something like Figure ref.
 
 ![rice_nearest](./assets/rice_nearest.jpg)
 
@@ -140,7 +140,7 @@ out_img[i,j] = tmp[x1,j] + (x-x1)*(tmp[x1+1,j]-tmp[x1,j])
 
 Note that the first two lines of boundary detection are necessary.
 
-The result of this implementation looks something like Figure \ref{}.
+The result of this implementation looks something like Figure ref.
 
 ![rice_bilinear_original](./assets/rice_bilinear_original.jpg)
 
@@ -178,7 +178,7 @@ And the `weighted_neighbor_value()` function calculates the final pixel’s valu
 out_img[x, y] = (1-n) * (m * img[x2+1,y2] + (1-m) * img[x2,y2])+ n * (m * img[x2+1,y2+1] + (1-m)*img[x2,y2+1])
 ```
 
-The resulting interpolated image of this approach looks something like Figure \ref{}, which is the same as Figure \ref{}.
+The resulting interpolated image of this approach looks something like Figure ref, which is the same as Figure ref.
 
 ![rice_bilinear](./assets/rice_bilinear.jpg)
 
@@ -233,13 +233,13 @@ tmp[x, y] = poly(x1)
 
 Here, `m` and `n` are the `sample_x` and `sample_y` in the pseudo-code.
 
-The resulting image of bicubic interpolation is Figure \ref{}.
+The resulting image of bicubic interpolation is Figure ref.
 
 ![rice_bicubic](./assets/rice_bicubic.jpg)
 
 # 4 Result Analysis
 
-From the above Figure \ref{} to Figure \ref{}, we can intuitively understand these three interpolation methods.
+From the above Figure ref to Figure ref, we can intuitively understand these three interpolation methods.
 
 For nearest neighbor interpolation, the edgy effect is because nearby pixels in the interpolated image can be assigned to different neighbors in the original image, and this causes the neighbor of the interpolated image to have mutated values.
 

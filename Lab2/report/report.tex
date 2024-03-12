@@ -134,10 +134,10 @@ Interpolation}\label{21-nearest-neighbor-interpolation}}
 
 Nearest neighbor interpolation is perhaps the most straightforward and
 also the fastest interpolation method. The most important part of the
-nearest neighbor interpolation is pixel mapping. As shown in figure
-\textbackslash ref\{\}, the index of the interpolated image (in brown)
-can be mapped into the index of the original image (in green).
-\textbf{Note that the grid points represent pixels.}
+nearest neighbor interpolation is pixel mapping. As shown in figure ref,
+the index of the interpolated image (in brown) can be mapped into the
+index of the original image (in green). \textbf{Note that the grid
+points represent pixels.}
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/nearest_mapping.jpg}
 
@@ -174,7 +174,7 @@ if we want the interpolated image to be smooth rather than edgy. The
 naive method for bilinear interpolation is that we can first interpolate
 along one of the axes and then interpolate along the other.
 
-The basic method is shown in figure \textbackslash ref\{\}.
+The basic method is shown in figure ref.
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -199,10 +199,10 @@ original image. So, we may ask, since it is bilinear, is there a way to
 assign an interpolated pixel with only the weighted values of those four
 neighbors? The answer is yes.
 
-As shown in Figure \textbackslash ref\{\}, we can use the formula in
-this figure to obtain the exact value of the interpolated pixel directly
-from the four neighbors. Parameters \texttt{m} and \texttt{n} can be
-easily derived from the mapped indexes of interpolated pixels.
+As shown in Figure ref, we can use the formula in this figure to obtain
+the exact value of the interpolated pixel directly from the four
+neighbors. Parameters \texttt{m} and \texttt{n} can be easily derived
+from the mapped indexes of interpolated pixels.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/bilinear_mapping_fast.jpg}
 
@@ -217,11 +217,10 @@ the original image at the edge of the interpolated image for us to do
 cubic regression. My solution is as follows, though it may seem
 inefficient.
 
-As shown in Figure \textbackslash ref\{\}, to obtain the pixel value of
-the center pixel marked \texttt{o}, we need first to use cubic
-regression to interpolate the intermediate pixel values marked
-\texttt{x} along the y-axis, then use these intermediate pixel values to
-interpolate along the x-axis.
+As shown in Figure ref, to obtain the pixel value of the center pixel
+marked \texttt{o}, we need first to use cubic regression to interpolate
+the intermediate pixel values marked \texttt{x} along the y-axis, then
+use these intermediate pixel values to interpolate along the x-axis.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/bicubic_mapping.jpg}
 
@@ -232,8 +231,7 @@ coding by flipping the index of those out of the bound.
 \hypertarget{3-experiment}{%
 \section{3 Experiment}\label{3-experiment}}
 
-Note: The testing image for this section is Figure
-\textbackslash ref\{\}.
+Note: The testing image for this section is Figure ref.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/rice_original.jpg}
 
@@ -283,7 +281,7 @@ searching for the nearest integer, we need not write another function to
 do this.
 
 The output image of the nearest neighbor interpolation looks something
-like Figure \textbackslash ref\{\}.
+like Figure ref.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/rice_nearest.jpg}
 
@@ -342,8 +340,7 @@ looks something like this:
 
 Note that the first two lines of boundary detection are necessary.
 
-The result of this implementation looks something like Figure
-\textbackslash ref\{\}.
+The result of this implementation looks something like Figure ref.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/rice_bilinear_original.jpg}
 
@@ -393,8 +390,7 @@ final pixel's value:
 \end{Shaded}
 
 The resulting interpolated image of this approach looks something like
-Figure \textbackslash ref\{\}, which is the same as Figure
-\textbackslash ref\{\}.
+Figure ref, which is the same as Figure ref.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/rice_bilinear.jpg}
 
@@ -462,17 +458,15 @@ like this:
 Here, \texttt{m} and \texttt{n} are the \texttt{sample\_x} and
 \texttt{sample\_y} in the pseudo-code.
 
-The resulting image of bicubic interpolation is Figure
-\textbackslash ref\{\}.
+The resulting image of bicubic interpolation is Figure ref.
 
 \includegraphics{D:/Tangent/SUSTech/大三下/课程资料/DIP/Lab/lab repo/Lab2/report/assets/rice_bicubic.jpg}
 
 \hypertarget{4-result-analysis}{%
 \section{4 Result Analysis}\label{4-result-analysis}}
 
-From the above Figure \textbackslash ref\{\} to Figure
-\textbackslash ref\{\}, we can intuitively understand these three
-interpolation methods.
+From the above Figure ref to Figure ref, we can intuitively understand
+these three interpolation methods.
 
 For nearest neighbor interpolation, the edgy effect is because nearby
 pixels in the interpolated image can be assigned to different neighbors
