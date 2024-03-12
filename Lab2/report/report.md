@@ -237,6 +237,45 @@ The resulting image of bicubic interpolation is Figure \ref{}.
 
 ![rice_bicubic](./assets/rice_bicubic.jpg)
 
-# 4 Results Analysis
+# 4 Result Analysis
 
-From the above Figure \ref{} to Figure \ref{}, we can have an intuitive 
+From the above Figure \ref{} to Figure \ref{}, we can intuitively understand these three interpolation methods.
+
+For nearest neighbor interpolation, the edgy effect is because nearby pixels in the interpolated image can be assigned to different neighbors in the original image, and this causes the neighbor of the interpolated image to have mutated values.
+
+For bilinear interpolation, since it considers the linear change in both directions, the interpolated image should have a smooth transition from pixel to pixel. However, this can also make the output image look blurry.
+
+For bicubic interpolation, it considers more nearby pixels during the interpolation process to capture the inner nature of change of the original image, giving the interpolated image a sharper outline.
+
+To better compare the efficiency of all of the above interpolations as well as a `scipy` implemented bicubic interpolation, I do a timing benchmark, the result is as follows:
+
+```python
+Nearest: 0.17167043685913086 seconds.
+Bilinear type1: 0.12122154235839844 seconds.
+Bilinear type2: 1.1743693351745605 seconds.
+Bicubic: 16.160951852798462 seconds.
+Bicubic Scipy: 0.00809168815612793 seconds.
+```
+
+The bicubic interpolation I wrote is the slowest, which is in accord with my expectation because it involves so many regressions. And since `scipy` is a library highly optimized for science computation, it should have the best record.
+
+However, I expected the bilinear interpolation in section 3.2.1 to be less efficient than the one in section 3.2.2, because the first approach involves 2 `for` loops while the second approach only involves 1 `for` loop, while the timing benchmark is against my intuition. So I tried to do some simple ablation study.
+
+I found that if I comment out all the pixel assignment statements, approach 2 runs faster than approach.
+
+```python
+Bilinear type1: 0.11931777000427246 seconds.
+Bilinear type2: 0.08695650100708008 seconds.
+```
+
+ Hence, the bottleneck of approach 2 is this statement:
+
+```python
+out_img[x, y] = (1-n) * (m * img[x2+1,y2] + (1-m) * img[x2,y2])+ n * (m * img[x2+1,y2+1] + (1-m)*img[x2,y2+1])
+```
+
+I guess that this statement runs so slowly due to the nature of memory, which means the process of accessing those pixel values in array `img` is not continuous.
+
+# 5 Conclusion
+
+In this lab, we explore three types of interpolation methods: nearest neighbor interpolation, bilinear interpolation, and bicubic interpolation. We first analyze the mathematic derivation of these interpolation methods. Then, we analyze the interpolation effects by looking into the images these interpolation methods produced and finding the root of these differences. Finally, we do a timing benchmark of this method and discover the efficiency difference between these methods. In particular, we try two implementations of bilinear interpolation, distinguishing their efficiency difference.
