@@ -53,7 +53,7 @@ As for the pixels close to the image edges, I flip the image along the edges to 
 
 # 3 Experiment
 
-Note: testing image for this part is as Figure \ref{}.
+Note: The testing image for this section is Figure \ref{}.
 
 ![rice_original](./assets/rice_original.jpg)
 
@@ -178,9 +178,65 @@ And the `weighted_neighbor_value()` function calculates the final pixel’s valu
 out_img[x, y] = (1-n) * (m * img[x2+1,y2] + (1-m) * img[x2,y2])+ n * (m * img[x2+1,y2+1] + (1-m)*img[x2,y2+1])
 ```
 
-The resulting interpolated image of this approach looks something like Figure \ref{}, which is the same with Figure \ref{}.
+The resulting interpolated image of this approach looks something like Figure \ref{}, which is the same as Figure \ref{}.
 
 ![rice_bilinear](./assets/rice_bilinear.jpg)
 
 ## 3.3 Bicubic Interpolation
 
+The pseudo-code for bicubic interpolation is as follows:
+
+```python
+# read the original image
+img = read_img(original_img)
+# create a zero image array
+out_img.initialized(size = (interpolated_dim[0],interpolated_dim[1]))
+# create an intermediate image array
+tmp.initialized(interpolated_dim[0],img.shape[1])
+
+# first interpolate along x-axis
+for x, y in tmp:
+    x1 = inverse_mapping(x)
+    sample_x = [floor(x1)-1,floor(x1),floor(x1)+1,floor(x1)+2]
+    sample_y = find_pixel_value_of_sample_x(flip_if_needed(sample_x))
+    cubic_func = fit_cubic_function(sample_x,sample_y)
+    tmp[x, y] = cubic_func(x1)
+
+# then interpolate along y-axis
+for x, y in out_img:
+    y1 = inverse_mapping(y)
+    sample_y = [floor(y1)-1,floor(y1),floor(y1)+1,floor(y1)+2]
+    sample_x = find_pixel_value_of_sample_y(flip_if_needed(sample_x))
+    cubic_func = fit_cubic_function(sample_x,sample_y)
+    out_img[x, y] = cubic_func(y1)
+
+return out_img
+```
+
+The `flip_if_needed()` function can handle the case that the requested index of the original pixel is out of bounds. It looks something like this if written in `Python` code:
+
+```python
+# find the nearest orginial pixel index
+m = np.array([np.floor(x1)-1, np.floor(x1), np.floor(x1)+1, np.floor(x1)+2])
+m_tmp = m.copy()
+m_tmp[m_tmp < 0] = np.abs(m_tmp[m_tmp < 0])
+m_tmp[m_tmp >= img.shape[0]] = 2*img.shape[0] - m_tmp[m_tmp >= img.shape[0]] - 1
+m_tmp = m_tmp.astype(int)
+```
+
+And I fit a cubic function using the `polyfit` and `poly1d` function in `numpy`,  which in code are something like this:
+```python
+coefficients = np.polyfit(m, n, 3)
+poly = np.poly1d(coefficients)
+tmp[x, y] = poly(x1)
+```
+
+Here, `m` and `n` are the `sample_x` and `sample_y` in the pseudo-code.
+
+The resulting image of bicubic interpolation is Figure \ref{}.
+
+![rice_bicubic](./assets/rice_bicubic.jpg)
+
+# 4 Results Analysis
+
+From the above Figure \ref{} to Figure \ref{}, we can have an intuitive 
