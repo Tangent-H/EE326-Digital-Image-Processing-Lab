@@ -82,13 +82,13 @@ def sobel(img: np.ndarray) -> np.ndarray:
 
 # %%
 if __name__ == "__main__":
-    generate = False
+    generate = True
     test1 = plt.imread("in/Q4_1.tif")
     test2 = plt.imread("in/Q4_2.tif")
 
     func_handle = [laplace_filter, unsharp_masking, roberts, sobel]
     if generate:
-        for func in func_handle[3:4]:
+        for func in func_handle:
             mask1, out1 = func(test1)
             mask2, out2 = func(test2)
             plt.figure()
@@ -151,16 +151,4 @@ if __name__ == "__main__":
     Image.fromarray(test2_out3).save("out/Q4_2_blur_sobel_unsharp.jpg")
     _, test2_out4 = unsharp_masking(test2_blur)
     Image.fromarray(test2_out4).save("out/Q4_2_blur_then_unsharp.jpg")
-
-
-
-    
-    
-    
-        
-        
-
-
-
-
-
+# %%
