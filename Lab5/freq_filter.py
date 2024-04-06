@@ -56,13 +56,13 @@ def pad_sobel(padding_x: int = 1, padding_y: int = 1):
     # add additional zeros along each axes
     sobel_y = np.vstack((np.zeros(sobel_y.shape[1]), sobel_y))
     sobel_y = np.hstack((np.zeros((sobel_y.shape[0],1)), sobel_y))
-    sobel_y = np.pad(sobel_y, ((padding_x, padding_x), \
-                    (padding_y, padding_y)), mode='constant', constant_values=0)
+    sobel_y = np.pad(sobel_y, ((0, padding_x), \
+                    (0, padding_y)), mode='constant', constant_values=0)
     return sobel_y
 
 # %%
 def sobel_freq(img: np.ndarray):
-    sobel = pad_sobel(int(img.shape[0]/2), int(img.shape[1]/2))
+    sobel = pad_sobel(int(img.shape[0]), int(img.shape[1]))
     img_pad = np.pad(img, ((0, 4), (0, 4)), mode='constant', constant_values=0)
     X_img = np.fft.fft2(img_pad)
     H_sobel = np.fft.fft2(sobel)
