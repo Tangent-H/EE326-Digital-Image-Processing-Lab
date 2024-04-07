@@ -144,8 +144,28 @@ def ideal_lpf(D: int, img: np.ndarray):
     return y_img
 
 # %%
-def gaussian_filter(D: int, img: np.ndarray, lowpass: bool = True):
+def gaussian_filter(D0: int, img: np.ndarray, order: int = 2, lowpass: bool = True):
+    img_pad = np.pad(img, ((0,img.shape[0]), (0,img.shape[1])), mode='constant', constant_values=0)
+    X_img = np.fft.fft2(img_pad)
+    X_img = np.fft.fftshift(X_img)
+
+    xx, yy = np.ogrid[0:img_pad.shape[0], 0:img_pad.shape[1]]
+    mid_x = img_pad.shape[0] // 2
+    mid_y = img_pad.shape[1] // 2
+    D2 = (xx - mid_x) ** 2 + (yy - mid_y) ** 2
+    H_lpf = np.exp(-D2 / (2 * D0 ** 2))
     
+    Y_img = np.zeros(X_img.shape)
+    if lowpass:
+        Y_img = X_img * H_lpf
+    else:
+        Y_img = X_img * (1 - H_lpf)
+    Y_img = np.fft.ifftshift(Y_img)
+    y_img = np.fft.ifft2(Y_img)
+    y_img = np.real(y_img)
+    y_img = y_img[0:img.shape[0], 0:img.shape[1]]
+    return y_img
+
 # %% 
 #-----------------Testing Section-----------------#
 # read image
@@ -186,5 +206,24 @@ plt.show()
 
 # %% 
 # Gaussian low pass / high pass
+D0 = [30, 60, 160]
+plt.figure()
+for i in range(3):
+    lpf = gaussian_filter(D0[i], img_t[1])
+    plt.subplot(1,3,i+1)
+    plt.imshow(lpf, cmap='gray')
+    plt.axis('off')
+    plt.title(f"GLPF D0={D0[i]}")
+plt.show()
+
+for i in range(3):
+    lpf = gaussian_filter(D0[i], img_t[1], lowpass=False)
+    plt.subplot(1,3,i+1)
+    plt.imshow(lpf, cmap='gray')
+    plt.axis('off')
+    plt.title(f"GHPF D0={D0[i]}")
+plt.show()
 
 
+
+# %%
