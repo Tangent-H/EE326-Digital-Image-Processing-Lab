@@ -13,13 +13,14 @@ def pd_print(arr: np.ndarray):
 # %%
 def conv2d(img: np.ndarray, kernel: np.ndarray, stride: int = 0, padding: int = 0) -> np.ndarray:
     temp = np.pad(img, padding, mode='reflect')
+    kernel = np.flipud(np.fliplr(kernel)) #! flip the kernel up-down and left-right (according to the definition of convolution)
     out_img = np.zeros(img.shape)
     for i in range(0, img.shape[0], stride):
         for j in range(0, img.shape[1], stride):
             out_img[i, j] = np.sum(temp[i:i+kernel.shape[0], j:j+kernel.shape[1]] * kernel)
     return out_img
 # %%
-def show_fft(img: np.ndarray):
+def show_fft(img: np.ndarray, return_specturm: bool = False):
     f = np.fft.fft2(img)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = np.log(np.abs(fshift) + 1)
@@ -65,7 +66,8 @@ def show_fft(img: np.ndarray):
     # plt.axis('off')
     # plt.title('Imaginary Part')
     # plt.show()
-
+    if return_specturm:
+        return magnitude_spectrum
     return 
 # %%
 def sobel_spatial(img: np.ndarray):
@@ -81,6 +83,7 @@ def pad_sobel(padding_x: int = 1, padding_y: int = 1):
     sobel_y = np.hstack((np.zeros((sobel_y.shape[0],1)), sobel_y))
     sobel_y = np.pad(sobel_y, ((0, padding_x), \
                     (0, padding_y)), mode='constant', constant_values=0)
+    '''np.pad(img, ((pad before first axis, pad after first axis),(pad before second axis, pad after second axis)),...)'''
     return sobel_y
 
 # %%
@@ -98,7 +101,7 @@ def sobel_freq(img: np.ndarray):
     plt.figure()
     plt.subplot(1,2,1)
     plt.imshow(sobel, cmap='gray')
-    plt.axis('off')
+    # plt.axis('off')
     plt.title('Sobel Filter')
     plt.subplot(1,2,2)
     plt.imshow(img_pad, cmap='gray')
@@ -167,6 +170,42 @@ def gaussian_filter(D0: int, img: np.ndarray, order: int = 2, lowpass: bool = Tr
     return y_img
 
 # %% 
+def butter_notch(D0k: list, img: np.ndarray, uk: list, vk: list ,order: int = 4, scale = True):
+    assert len(D0k) == len(uk) == len(vk), 'Invalid input. # of D0k, uk, vk should be the same.'
+    img_pad = np.pad(img, ((0,img.shape[0]), (0,img.shape[1])), mode= 'constant', constant_values=0)
+    X_img = np.fft.fft2(img_pad)
+    X_img = np.fft.fftshift(X_img)
+
+    uu,vv = np.ogrid[0:X_img.shape[0], 0:X_img.shape[1]]
+
+    Dk = []
+    D_k = []
+    H = np.ones(X_img.shape)
+
+    if scale:
+        uk = [u * X_img.shape[0] for u in uk]
+        vk = [v * X_img.shape[1] for v in vk]
+    print(f"uk")
+
+    for k in range(len(D0k)):
+        dk = np.sqrt((uu-uk[k])**2 + (vv -vk[k])**2)
+        d_k = np.sqrt((uu-(X_img.shape[0]-uk[k]))**2 + (vv - (X_img.shape[1]-vk[k]))**2)
+        H = H * (1/(1+(D0k[k]/dk)**(2*order))) * (1/(1+(D0k[k]/d_k)**(2*order)))
+    
+    # debugging
+    plt.figure()
+    plt.imshow(H, cmap='gray')
+    plt.axis('off')
+    plt.title('Butterworth Notch Filter')
+    plt.show()
+    Y_img = X_img * H
+    Y_img = np.fft.ifftshift(Y_img)
+    y_img = np.fft.ifft2(Y_img)
+    y_img = np.real(y_img)
+    y_img = y_img[0:img.shape[0], 0:img.shape[1]]
+    return y_img
+
+# %% 
 #-----------------Testing Section-----------------#
 # read image
 np.set_printoptions(threshold=np.inf)
@@ -224,6 +263,21 @@ for i in range(3):
     plt.title(f"GHPF D0={D0[i]}")
 plt.show()
 
-
-
 # %%
+# Butterworth notch filter
+
+Dk = [15, 15, 15, 15]
+uk = [0.17, 0.33, 0.66, 0.84]
+vk = [0.35, 0.35, 0.35, 0.35]
+
+# Dk = [10]
+# uk = [0.9]
+# vk = [0.1]
+# vk = [0.5-v for v in vk]
+nrf = butter_notch(Dk, img_t[2], uk, vk, order=4)
+plt.figure()
+plt.imshow(nrf, cmap='gray')
+plt.axis('off')
+plt.title('NRF Result')
+plt.show()
+show_fft(nrf)
