@@ -43,6 +43,29 @@ def show_fft(img: np.ndarray):
     plt.imshow(phase_spectrum, cmap='gray')
     plt.axis('off')
     plt.title('Phase Spectrum')
+
+    # real and imaginary part
+    # real = np.real(fshift)
+    # real = (real - real.min()) / (real.max() - real.min()) * 255
+    # real = np.log(real + 1)
+    # real = real.astype(np.uint8)
+
+    # imag = np.imag(fshift)
+    # imag = (imag - imag.min()) / (imag.max() - imag.min()) * 255
+    # imag = np.log(imag + 1)
+    # imag = imag.astype(np.uint8)
+
+    # plt.figure()
+    # plt.subplot(1,2,1)
+    # plt.imshow(real, cmap='gray')
+    # plt.axis('off')
+    # plt.title('Real Part')
+    # plt.subplot(1,2,2)
+    # plt.imshow(imag, cmap='gray')
+    # plt.axis('off')
+    # plt.title('Imaginary Part')
+    # plt.show()
+
     return 
 # %%
 def sobel_spatial(img: np.ndarray):
@@ -65,7 +88,9 @@ def sobel_freq(img: np.ndarray):
     sobel = pad_sobel(int(img.shape[0]), int(img.shape[1]))
     img_pad = np.pad(img, ((0, 4), (0, 4)), mode='constant', constant_values=0)
     X_img = np.fft.fft2(img_pad)
+    # X_img = np.fft.fftshift(X_img)
     H_sobel = np.fft.fft2(sobel)
+    # H_sobel = np.fft.fftshift(H_sobel)
     Y_img = X_img * H_sobel
     y_img = np.fft.ifft2(Y_img)
     y_img = np.real(y_img)
@@ -80,32 +105,86 @@ def sobel_freq(img: np.ndarray):
     plt.axis('off')
     plt.title('Padded Image')
     plt.show()
-
-    show_fft(img_pad)
-    show_fft(sobel)
-    show_fft(y_img)
+    # for debugging
+    # show_fft(img_pad)
+    # show_fft(sobel)
+    # show_fft(y_img)
+    
+    # for i in range(y_img.shape[0]):
+    #     for j in range(y_img.shape[1]):
+    #         y_img[i, j] = y_img[i, j] * (-1) ** (i + j)
     return y_img
 
 # %%
-if __name__ == "__main__":
-    # read image
-    img_t = []
-    for i in range (1, 4):
-        img_t.append(plt.imread(f"in/Q5_{i}.tif"))
-        show_fft(img_t[i-1])
+def ideal_lpf(D: int, img: np.ndarray):
+    # create a mask
+    H_lpf = np.zeros((img.shape[0]*2, img.shape[1]*2))
     
-    # apply sobel filter in spatial domain and frequency domain
-    sobel_s = sobel_spatial(img_t[0])
-    sobel_f = sobel_freq(img_t[0])
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.imshow(sobel_s, cmap='gray')
-    plt.axis('off')
-    plt.title('Sobel Spatial')
-    plt.subplot(1,2,2)
-    plt.imshow(sobel_f, cmap='gray')
-    plt.axis('off')
-    plt.title('Sobel Frequency')
-    plt.show()
+    img_pad = np.pad(img, ((0,img.shape[0]), (0,img.shape[1])), mode='constant', constant_values=0)
+    X_img = np.fft.fft2(img_pad)
+    X_img = np.fft.fftshift(X_img)
+    xx, yy = np.ogrid[0:H_lpf.shape[0], 0:H_lpf.shape[1]]
+    # compared to mgrid, ogrid is more efficient(only generate the axis value: a vector)
+    mid_x = H_lpf.shape[0] // 2
+    mid_y = H_lpf.shape[1] // 2
+    H_lpf = np.where((xx-mid_x) ** 2 + (yy-mid_y) ** 2 <= D ** 2, 255, 0)
+    
+    # # debugging
+    # plt.figure()
+    # plt.imshow(H_lpf, cmap='gray')
+    # plt.axis('off')
+    # plt.title('Ideal LPF')
+    # plt.show()
+
+    Y_img = X_img * H_lpf
+    Y_img = np.fft.ifftshift(Y_img)
+    y_img = np.fft.ifft2(Y_img)
+    y_img = np.real(y_img)
+    y_img = y_img[0:img.shape[0], 0:img.shape[1]]
+    return y_img
 
 # %%
+def gaussian_filter(D: int, img: np.ndarray, lowpass: bool = True):
+    
+# %% 
+#-----------------Testing Section-----------------#
+# read image
+np.set_printoptions(threshold=np.inf)
+# read image
+img_t = []
+for i in range (1, 4):
+    img_t.append(plt.imread(f"in/Q5_{i}.tif"))
+    show_fft(img_t[i-1])
+
+# %% 
+# apply sobel filter in spatial domain and frequency domain
+sobel_s = sobel_spatial(img_t[0])
+sobel_f = sobel_freq(img_t[0])
+plt.figure()
+plt.subplot(1,2,1)
+plt.imshow(sobel_s, cmap='gray')
+plt.axis('off')
+plt.title('Sobel Spatial')
+plt.subplot(1,2,2)
+plt.imshow(sobel_f, cmap='gray')
+plt.axis('off')
+plt.title('Sobel Frequency')
+plt.show()
+
+# %%
+# ideal low pass filter
+D = [10, 30, 60, 160, 460]
+plt.figure()
+for i in range(5):
+    lpf = ideal_lpf(D[i], img_t[1])
+    plt.subplot(2,3,i+1)
+    plt.imshow(lpf, cmap='gray')
+    plt.axis('off')
+    plt.title(f"Ideal LPF D={D[i]}")
+    
+plt.show()
+
+# %% 
+# Gaussian low pass / high pass
+
+
