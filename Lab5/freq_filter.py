@@ -88,8 +88,8 @@ def pad_sobel(padding_x: int = 1, padding_y: int = 1):
 
 # %%
 def sobel_freq(img: np.ndarray):
-    sobel = pad_sobel(int(img.shape[0]), int(img.shape[1]))
-    img_pad = np.pad(img, ((0, 4), (0, 4)), mode='constant', constant_values=0)
+    sobel = pad_sobel(int(img.shape[0]-1), int(img.shape[1])-1)
+    img_pad = np.pad(img, ((0, 3), (0, 3)), mode='constant', constant_values=0)
     X_img = np.fft.fft2(img_pad)
     # X_img = np.fft.fftshift(X_img)
     H_sobel = np.fft.fft2(sobel)
@@ -97,7 +97,7 @@ def sobel_freq(img: np.ndarray):
     Y_img = X_img * H_sobel
     y_img = np.fft.ifft2(Y_img)
     y_img = np.real(y_img)
-    y_img = y_img[0:-4, 0:-4]
+    y_img = y_img[0:-3, 0:-3]
     plt.figure()
     plt.subplot(1,2,1)
     plt.imshow(sobel, cmap='gray')
@@ -266,7 +266,7 @@ plt.show()
 # %%
 # Butterworth notch filter
 
-Dk = [15, 15, 15, 15]
+Dk = [30, 30, 30, 30]
 uk = [0.17, 0.33, 0.66, 0.84]
 vk = [0.35, 0.35, 0.35, 0.35]
 
