@@ -53,26 +53,24 @@ def show_fft(img: np.ndarray, return_specturm: bool = False, savefig=False):
     plt.show()
 
     # real and imaginary part
-    # real = np.real(fshift)
-    # real = (real - real.min()) / (real.max() - real.min()) * 255
-    # real = np.log(real + 1)
-    # real = real.astype(np.uint8)
+    real = np.real(fshift)
+    real = (real - real.min()) / (real.max() - real.min()) * 255
+    real = real.astype(np.uint8)
 
-    # imag = np.imag(fshift)
-    # imag = (imag - imag.min()) / (imag.max() - imag.min()) * 255
-    # imag = np.log(imag + 1)
-    # imag = imag.astype(np.uint8)
+    imag = np.imag(fshift)
+    imag = (imag - imag.min()) / (imag.max() - imag.min()) * 255
+    imag = imag.astype(np.uint8)
 
-    # plt.figure()
-    # plt.subplot(1,2,1)
-    # plt.imshow(real, cmap='gray')
-    # plt.axis('off')
-    # plt.title('Real Part')
-    # plt.subplot(1,2,2)
-    # plt.imshow(imag, cmap='gray')
-    # plt.axis('off')
-    # plt.title('Imaginary Part')
-    # plt.show()
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.imshow(real, cmap='gray')
+    plt.axis('off')
+    plt.title('Real Part')
+    plt.subplot(1,2,2)
+    plt.imshow(imag, cmap='gray')
+    plt.axis('off')
+    plt.title('Imaginary Part')
+    plt.show()
     if return_specturm:
         return magnitude_spectrum
     return 
@@ -99,11 +97,11 @@ def pad_sobel(padding_x: int = 1, padding_y: int = 1):
 # %%
 def sobel_freq(img: np.ndarray):
     sobel = pad_sobel(int(img.shape[0]-1), int(img.shape[1])-1)
+    sobel = np.roll(sobel, shift=-1, axis=0)  # move up
+    sobel = np.roll(sobel, shift=-1, axis=1)  # move left
     img_pad = np.pad(img, ((0, 2), (0, 2)), mode='constant', constant_values=0)
     X_img = np.fft.fft2(img_pad)
-    # X_img = np.fft.fftshift(X_img)
     H_sobel = np.fft.fft2(sobel)
-    # H_sobel = np.fft.fftshift(H_sobel)
     Y_img = X_img * H_sobel
     y_img = np.fft.ifft2(Y_img)
     y_img = np.real(y_img)
@@ -111,7 +109,7 @@ def sobel_freq(img: np.ndarray):
     plt.figure()
     plt.subplot(1,2,1)
     plt.imshow(sobel, cmap='gray')
-    # plt.axis('off')
+    plt.axis('off')
     plt.title('Sobel Filter')
     plt.subplot(1,2,2)
     plt.imshow(img_pad, cmap='gray')
