@@ -52,15 +52,15 @@ def select_roi(image):
             rect = (rect[0], rect[1], x, y)
             drawing = False
 
-    cv2.namedWindow('image')
-    cv2.setMouseCallback('image', on_mouse)
+    cv2.namedWindow('Select ROI')
+    cv2.setMouseCallback('Select ROI', on_mouse)
     
     while True:
         img_copy = image.copy()
         if rect[2] - rect[0] > 0 and rect[3] - rect[1] > 0:
             cv2.rectangle(img_copy, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 0), 2)
-        cv2.imshow('image', img_copy)
-        if cv2.waitKey(1) & 0xFF == 27:  # Press ESC to exit
+        cv2.imshow('Select ROI', img_copy)
+        if cv2.waitKey(1) & 0xFF == 13:  # Press ENTER to exit
             break
 
     cv2.destroyAllWindows()

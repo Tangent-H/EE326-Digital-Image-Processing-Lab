@@ -151,4 +151,3 @@ if __name__ == "__main__":
     Image.fromarray(test2_out3).save("out/Q4_2_blur_sobel_unsharp.jpg")
     _, test2_out4 = unsharp_masking(test2_blur)
     Image.fromarray(test2_out4).save("out/Q4_2_blur_then_unsharp.jpg")
-# %%

@@ -80,10 +80,7 @@ def adaptive_mean_filter(input_image, noise_var, n_size):
         for j in range(input_image.shape[1]):
             window = temp[i:i+n_size, j:j+n_size]
             window_var = np.var(window)
-            if window_var > noise_var:
-                output_image[i, j] = np.mean(window)
-            else:
-                output_image[i, j] = input_image[i, j]
+            output_image[i, j] = input_image[i, j] - (noise_var/window_var) * (input_image[i, j] - np.mean(window))
     return output_image
 #%% ---------------------------------------------------------
 # read all the images from the folder
@@ -130,7 +127,7 @@ for name in test_image:
     plt.axis('off')
     plt.savefig(f'out/{name}_adaptive_median.png', bbox_inches='tight')
     plt.show()
-# %%
+# %% ---------------------------------------------------------
 # according to the ROI pixel values ditribution, the noise is SAP and uniform
 # we first use the adaptive median filter to remove the impulse noise
 # then we use the adaptive mean filter to remove the uniform noise
@@ -148,9 +145,9 @@ plt.imshow(img_alpha, cmap='gray')
 plt.title('Alpha Trimmed Mean Filtered')
 plt.axis('off')
 plt.savefig(f'out/{test_image}_alpha_trimmed_mean.png', bbox_inches='tight')
-# %%
+# %% ---------------------------------------------------------
 # get the local intensity distribution to estimate the noise type
-roi_index = select_roi(img_ad)    # press esc to close the window
+roi_index = select_roi(img_ad)    # press ENTER to close the window
 print(roi_index)
 roi = img_ad[roi_index[1]:roi_index[3], roi_index[0]:roi_index[2]]
 plt.figure()
@@ -161,7 +158,8 @@ plt.show()
 show_distr(roi.flatten())
 # estimate the noise variance
 var_noise = np.var(roi)
-img_mean = adaptive_mean_filter(img_ad, var_noise, 3)
+print(f"Estimated noise variance: {var_noise}")
+img_mean = adaptive_mean_filter(img_ad, var_noise, 7)
 plt.figure()
 plt.subplot(1, 2, 1)
 plt.imshow(img, cmap='gray')
@@ -173,3 +171,4 @@ plt.title('Adaptive Mean Filtered')
 plt.axis('off')
 plt.savefig(f'out/{test_image}_adaptive_mean.png', bbox_inches='tight')
 plt.show()
+# %%
