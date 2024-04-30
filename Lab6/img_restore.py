@@ -82,6 +82,16 @@ def adaptive_mean_filter(input_image, noise_var, n_size):
             window_var = np.var(window)
             output_image[i, j] = input_image[i, j] - (noise_var/window_var) * (input_image[i, j] - np.mean(window))
     return output_image
+
+# %%
+def butter_freq_lpf(img_fft, D0, n):
+    xx, yy = np.ogrid[0:img_fft.shape[0], 0:img_fft.shape[1]]
+    mid_x = img_fft.shape[0] / 2
+    mid_y = img_fft.shape[1] / 2
+    D = np.sqrt((xx - mid_x) ** 2 + (yy - mid_y) ** 2)
+    H_lpf = 1/(1+(D/D0)**(2*n))
+    Y_img = img_fft * H_lpf
+    return Y_img
 #%% ---------------------------------------------------------
 # read all the images from the folder
 folder = 'in'
@@ -171,5 +181,55 @@ plt.imshow(img_mean, cmap='gray',vmin=0,vmax=255)
 plt.title('Adaptive Mean Filtered')
 plt.axis('off')
 plt.savefig(f'out/{test_image}_adaptive_mean.png', bbox_inches='tight')
+plt.show()
+# %%
+# Full inverse filtering
+# note that the degration filter define its origin at the filter center
+test_image = 'Q6_2'
+img = images[test_image]
+print(f"Max: {np.max(img)}, Min: {np.min(img)}")
+img_fft = np.fft.fftshift(np.fft.fft2(img))
+H = np.zeros(img_fft.shape, dtype=img_fft.dtype)
+u_center = img_fft.shape[0]/2
+v_center = img_fft.shape[1]/2
+print(f"Center: ({u_center}, {v_center})")
+for u in range(img_fft.shape[0]):
+    for v in range(img_fft.shape[1]):
+        H[u, v] = np.exp(-0.0025*((u-u_center)**2+(v-v_center)**2)**(5/6))
+plt.figure()
+plt.imshow(np.real(H), cmap='gray')
+plt.title('Degradation Filter')
+plt.axis('off')
+plt.savefig(f'out/{test_image}_degradation.png', bbox_inches='tight')
+plt.show()
+
+img_fft_restore = np.fft.ifftshift(img_fft / (H+0.01))
+img_restore = np.real(np.fft.ifft2(img_fft_restore))
+print(f"Max: {np.max(img_restore)}, Min: {np.min(img_restore)}")
+# img_restore = img_restore.astype(np.uint8)
+img_restore = np.clip(img_restore, 0, 255).astype(np.uint8)
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.imshow(img, cmap='gray',vmin=0,vmax=255)
+plt.title('Original')
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img_restore, cmap='gray',vmin=0,vmax=255)
+plt.title('Restored')
+plt.axis('off')
+plt.savefig(f'out/{test_image}_restore.png', bbox_inches='tight')
+# %%
+# Full inverse filtering + Butterworth low-pass filter
+plt.figure()
+for i in range(6):
+    img_fft_restore_bt = butter_freq_lpf(img_fft / H,30 + 10*i, 10)
+    img_restore_bt = np.real(np.fft.ifft2(np.fft.ifftshift(img_fft_restore_bt)))
+    print(f"Max: {np.max(img_restore_bt)}, Min: {np.min(img_restore_bt)}")
+    img_restore_bt = np.clip(img_restore_bt, 0, 255).astype(np.uint8)
+    plt.subplot(2, 3, i+1)
+    plt.imshow(img_restore_bt, cmap='gray',vmin=0,vmax=255)
+    plt.title(f'D0={30+10*i}')
+    plt.axis('off')
+plt.savefig(f'out/{test_image}_restore_butterworth.png', bbox_inches='tight')
 plt.show()
 # %%
