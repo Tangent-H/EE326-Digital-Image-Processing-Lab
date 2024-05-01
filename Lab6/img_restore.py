@@ -92,6 +92,24 @@ def butter_freq_lpf(img_fft, D0, n):
     H_lpf = 1/(1+(D/D0)**(2*n))
     Y_img = img_fft * H_lpf
     return Y_img
+# %%
+def wiener(img_fft, H, K):
+    H_abs_2 = np.abs(H)**2
+    Y_img = (H_abs_2/H/(H_abs_2+K)) * img_fft
+    return Y_img
+
+# %%
+# def get_motion_blur_filter(img_shape, a, b, T):
+#     epsilon = 1e-2
+#     uu, vv = np.ogrid[0:img_shape[0], 0:img_shape[1]]
+#     return T/(np.pi*(uu*a+vv*b+epsilon))*np.sin(np.pi*(uu*a+vv*b))*np.exp(-1j*np.pi*(uu*a+vv*b))
+
+def get_motion_blur_filter(img_shape, a, b, T, epsilon=1e-10):
+    uu, vv = np.ogrid[0:img_shape[0], 0:img_shape[1]]
+    D = uu * a + vv * b
+    print(D)
+    H = (T / (np.pi * (D + epsilon))) * np.sin(np.pi * D) * np.exp(-1j * np.pi * D)
+    return H
 #%% ---------------------------------------------------------
 # read all the images from the folder
 folder = 'in'
@@ -182,7 +200,7 @@ plt.title('Adaptive Mean Filtered')
 plt.axis('off')
 plt.savefig(f'out/{test_image}_adaptive_mean.png', bbox_inches='tight')
 plt.show()
-# %%
+# %% ---------------------------------------------------------
 # Full inverse filtering
 # note that the degration filter define its origin at the filter center
 test_image = 'Q6_2'
@@ -203,7 +221,7 @@ plt.axis('off')
 plt.savefig(f'out/{test_image}_degradation.png', bbox_inches='tight')
 plt.show()
 
-img_fft_restore = np.fft.ifftshift(img_fft / (H+0.01))
+img_fft_restore = np.fft.ifftshift(img_fft / (H + 1e-2))
 img_restore = np.real(np.fft.ifft2(img_fft_restore))
 print(f"Max: {np.max(img_restore)}, Min: {np.min(img_restore)}")
 # img_restore = img_restore.astype(np.uint8)
@@ -232,4 +250,99 @@ for i in range(6):
     plt.axis('off')
 plt.savefig(f'out/{test_image}_restore_butterworth.png', bbox_inches='tight')
 plt.show()
-# %%
+# %% ---------------------------------------------------------
+# Wiener filtering
+plt.figure()
+img_wieners = []
+for i in range(6):
+    K = 1e-4*i
+    img_fft_wiener = wiener(img_fft, H, K)
+    img_wieners.append(np.real(np.fft.ifft2(np.fft.ifftshift(img_fft_wiener))))
+    print(f"Max: {np.max(img_wieners[i])}, Min: {np.min(img_wieners[i])}")
+    img_wiener = np.clip(img_wieners[i], 0, 255).astype(np.uint8)
+    plt.subplot(2, 3, i+1)
+    plt.imshow(img_wiener, cmap='gray',vmin=0,vmax=255)
+    plt.title(f'K={K:.4f}')
+    plt.axis('off')
+    print(f"K={K}")
+plt.savefig(f'out/{test_image}_restore_wiener.png', bbox_inches='tight')
+plt.show()
+
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.imshow(img_restore, cmap='gray',vmin=0,vmax=255)
+plt.title('Full Inverse Filtering plus 0.01')
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img_wieners[2], cmap='gray',vmin=0,vmax=255)
+plt.title('Wiener Filtering 0.0003')
+plt.axis('off')
+plt.savefig(f'out/{test_image}_compare.png', bbox_inches='tight')
+plt.show()
+
+
+
+# %% ---------------------------------------------------------
+# Restoring motion-blurred image
+# Failed
+test_image = ['Q6_1_1','Q6_3_1', 'Q6_3_2', 'Q6_3_3']
+
+vx = 1
+vy = 1
+delta_t = 1e-2
+step = 1/delta_t
+
+uu, vv = np.ogrid[0:images[test_image[0]].shape[0], 0:images[test_image[0]].shape[1]]
+print(uu.shape, vv.shape)
+
+M = uu * vx + vv * vy
+M = M[np.newaxis, :, :]
+t = np.arange(0, 1, delta_t)
+t = t[:, np.newaxis, np.newaxis]
+H_mb = np.sum(np.exp(-1j*2*np.pi*M*t) * delta_t,axis=0)
+print(H_mb.shape)
+
+img = images['Q6_1_1']
+img_fft = np.fft.fft2(img)
+img_blur = np.real(np.fft.ifft2(img_fft * H_mb))
+img_blur = np.clip(img_blur, 0, 255).astype(np.uint8)
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.imshow(img, cmap='gray',vmin=0,vmax=255)
+plt.title('Original')
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img_blur, cmap='gray',vmin=0,vmax=255)
+plt.title('Motion Blurred')
+plt.axis('off')
+plt.savefig(f'out/{test_image[0]}_motion_blur.png', bbox_inches='tight')
+plt.show()
+
+# %% ---------------------------------------------------------
+test_image = ['Q6_1_1','Q6_3_1', 'Q6_3_2', 'Q6_3_3']
+H_mb = get_motion_blur_filter(images[test_image[1]].shape, 0.1, 0.1, 1)
+plt.figure()
+plt.imshow(np.real(H_mb), cmap='gray')
+plt.title('Motion Blur Filter')
+plt.axis('off')
+plt.show()
+
+img = test_image[1]
+img = images[img]
+img_fft = np.fft.fftshift(np.fft.fft2(img))
+img_mb_fft = img_fft / H_mb
+img_mb = np.real(np.fft.ifft2(np.fft.ifftshift(img_mb_fft)))
+img_mb = np.clip(img_mb, 0, 255).astype(np.uint8)
+plt.figure()
+plt.subplot(1, 2, 1)
+plt.imshow(img, cmap='gray',vmin=0,vmax=255)
+plt.title('Original')
+plt.axis('off')
+plt.subplot(1, 2, 2)
+plt.imshow(img_mb, cmap='gray',vmin=0,vmax=255)
+plt.title('Motion Blurred')
+plt.axis('off')
+plt.savefig(f'out/{test_image[0]}_motion_blur.png', bbox_inches='tight')
+plt.show()
+
+
