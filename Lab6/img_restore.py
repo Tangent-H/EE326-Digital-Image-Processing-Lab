@@ -105,11 +105,42 @@ def wiener(img_fft, H, K):
 #     return T/(np.pi*(uu*a+vv*b+epsilon))*np.sin(np.pi*(uu*a+vv*b))*np.exp(-1j*np.pi*(uu*a+vv*b))
 
 def get_motion_blur_filter(img_shape, a, b, T, epsilon=1e-10):
-    uu, vv = np.ogrid[0:img_shape[0], 0:img_shape[1]]
-    D = uu * a + vv * b
-    print(D)
-    H = (T / (np.pi * (D + epsilon))) * np.sin(np.pi * D) * np.exp(-1j * np.pi * D)
+    uu, vv = np.ogrid[1:img_shape[0]+1, 1:img_shape[1]+1]
+    # uu, vv = np.ogrid[0:img_shape[0], 0:img_shape[1]]
+    # m, n = img.shape
+    # uu, vv = np.meshgrid(np.linspace(1, m, m), np.linspace(1, n, n))
+    D = uu * a + vv * b + epsilon
+    H = T / (np.pi * D) * np.sin(np.pi * D) * np.exp(-1j * np.pi * D)
     return H
+
+# %%
+def regulate(img):
+    img = (img - np.min(img)) / (np.max(img) - np.min(img)) * 255
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    return img
+
+# %%
+def read_gray(path):
+    img = Image.open(path)
+    img = img.convert('L')
+    img = np.array(img)
+    return img
+
+# %%
+def cls_filter(img, H, gamma):
+    img_fft = np.fft.fftshift(np.fft.fft2(img))
+    p = np.array([[0,-1,0],[-1,4,-1],[0,-1,0]])
+    p = np.pad(p, ((0, img.shape[0]-3), (0, img.shape[1]-3)), mode='constant', constant_values=0)
+    p = np.roll(p, shift=-1,axis=0)
+    p = np.roll(p, shift=-1,axis=1)
+    P = np.fft.fftshift(np.fft.fft2(p))
+    H_conj = np.conj(H)
+    P_2 = P * np.conj(P)
+    H_2 = H * H_conj
+    Y = (H_conj / (H_2 + gamma * P_2)) * img_fft
+    y = np.real(np.fft.ifft2(np.fft.ifftshift(Y)))
+    y = regulate(y)
+    return y
 #%% ---------------------------------------------------------
 # read all the images from the folder
 folder = 'in'
@@ -285,14 +316,14 @@ plt.show()
 # %% ---------------------------------------------------------
 # Restoring motion-blurred image
 # Failed
-test_image = ['Q6_1_1','Q6_3_1', 'Q6_3_2', 'Q6_3_3']
-
-vx = 1
-vy = 1
+# test the motion blur filter
+test_image = read_gray('in/original.png')
+vx = 0.1
+vy = 0.1
 delta_t = 1e-2
 step = 1/delta_t
 
-uu, vv = np.ogrid[0:images[test_image[0]].shape[0], 0:images[test_image[0]].shape[1]]
+uu, vv = np.ogrid[0:test_image.shape[0], 0:test_image.shape[1]]
 print(uu.shape, vv.shape)
 
 M = uu * vx + vv * vy
@@ -302,7 +333,7 @@ t = t[:, np.newaxis, np.newaxis]
 H_mb = np.sum(np.exp(-1j*2*np.pi*M*t) * delta_t,axis=0)
 print(H_mb.shape)
 
-img = images['Q6_1_1']
+img = test_image
 img_fft = np.fft.fft2(img)
 img_blur = np.real(np.fft.ifft2(img_fft * H_mb))
 img_blur = np.clip(img_blur, 0, 255).astype(np.uint8)
@@ -315,24 +346,26 @@ plt.subplot(1, 2, 2)
 plt.imshow(img_blur, cmap='gray',vmin=0,vmax=255)
 plt.title('Motion Blurred')
 plt.axis('off')
-plt.savefig(f'out/{test_image[0]}_motion_blur.png', bbox_inches='tight')
+plt.savefig(f'out/original_motion_blur.png', bbox_inches='tight')
 plt.show()
 
 # %% ---------------------------------------------------------
-test_image = ['Q6_1_1','Q6_3_1', 'Q6_3_2', 'Q6_3_3']
-H_mb = get_motion_blur_filter(images[test_image[1]].shape, 0.1, 0.1, 1)
+test_image = read_gray('in/original.png')
+# test_image = np.pad(test_image, ((0, test_image.shape[0]), (0, test_image.shape[1])), mode='wrap')
+H_mb = get_motion_blur_filter(test_image.shape, 0.1, 0.1, 1)
 plt.figure()
-plt.imshow(np.real(H_mb), cmap='gray')
+plt.imshow(np.abs(H_mb), cmap='gray')
 plt.title('Motion Blur Filter')
 plt.axis('off')
 plt.show()
 
-img = test_image[1]
-img = images[img]
-img_fft = np.fft.fftshift(np.fft.fft2(img))
-img_mb_fft = img_fft / H_mb
-img_mb = np.real(np.fft.ifft2(np.fft.ifftshift(img_mb_fft)))
-img_mb = np.clip(img_mb, 0, 255).astype(np.uint8)
+img = test_image
+img_fft = np.fft.fft2(img)
+# img_fft = np.fft.fftshift(np.fft.fft2(img))
+img_mb_fft = img_fft * H_mb
+img_mb = np.real(np.fft.ifft2(img_mb_fft))
+# img_mb = np.real(np.fft.ifft2(np.fft.ifftshift(img_mb_fft)))
+img_mb = regulate(img_mb)
 plt.figure()
 plt.subplot(1, 2, 1)
 plt.imshow(img, cmap='gray',vmin=0,vmax=255)
@@ -342,7 +375,75 @@ plt.subplot(1, 2, 2)
 plt.imshow(img_mb, cmap='gray',vmin=0,vmax=255)
 plt.title('Motion Blurred')
 plt.axis('off')
-plt.savefig(f'out/{test_image[0]}_motion_blur.png', bbox_inches='tight')
+plt.savefig(f'out/original_motion_blur.png', bbox_inches='tight')
+plt.show()
+# %%
+# Winer Filtering
+test_image = ['Q6_3_1', 'Q6_3_2', 'Q6_3_3']
+img  = images[test_image[0]]
+# img = np.pad(img, ((0, img.shape[0]), (0, img.shape[1])), mode='constant', constant_values=0)
+# img_fft = np.fft.fft2(img)
+img_fft = np.fft.fftshift(np.fft.fft2(img))
+H = get_motion_blur_filter(img_fft.shape, 0.1, 0.1, 1)
+
+K = [1e-2, 1e-8, 1e-10, 1e-15]
+plt.figure()
+for k in K:
+    img_fft_wiener = wiener(img_fft, H, k)
+    img_wiener = np.real(np.fft.ifft2(np.fft.ifftshift(img_fft_wiener)))
+    img_wiener = regulate(img_wiener)
+    plt.subplot(2, 2, K.index(k)+1)
+    plt.imshow(img_wiener, cmap='gray',vmin=0,vmax=255)
+    plt.axis('off')
+    plt.title(f'K={k:.1e}')
+plt.savefig(f'out/{test_image[0]}_restore_wiener.png', bbox_inches='tight')
 plt.show()
 
+for i in range(1,3):
+    img  = images[test_image[i]]
+    img_fft = np.fft.fftshift(np.fft.fft2(img))
+    img_fft_wiener = wiener(img_fft, H, 8e-8)
+    img_wiener = np.real(np.fft.ifft2(np.fft.ifftshift(img_fft_wiener)))
+    img_wiener = regulate(img_wiener)
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.imshow(img, cmap='gray',vmin=0,vmax=255)
+    plt.title('Original')
+    plt.axis('off')
+    plt.subplot(1, 2, 2)
+    plt.imshow(img_wiener, cmap='gray',vmin=0,vmax=255)
+    plt.title('Wiener Filtering')
+    plt.axis('off')
+    plt.savefig(f'out/{test_image[i]}_restore_wiener.png', bbox_inches='tight')
+    plt.show()
 
+# %% ---------------------------------------------------------
+# Q6_3_2 and Q6_3_3
+test_image = ['Q6_3_2', 'Q6_3_3']
+
+img = images[test_image[0]]
+Gamma = [1e-2, 8e-5, 1e-6, 1e-8]
+H = get_motion_blur_filter(img.shape, 0.1, 0.1, 1)
+plt.figure()
+for g in Gamma:
+    img_cls = cls_filter(img, H, g)
+    plt.subplot(2, 2, Gamma.index(g)+1)
+    plt.imshow(img_cls, cmap='gray',vmin=0,vmax=255)
+    plt.axis('off')
+    plt.title(f'Gamma={g:.1e}')
+plt.savefig(f'out/{test_image[0]}_cls.png', bbox_inches='tight')
+plt.show()
+
+# %% ---------------------------------------------------------
+img = images[test_image[1]]
+Gamma = [1e-2, 1e-4, 5e-4, 1e-8]
+H = get_motion_blur_filter(img.shape, 0.1, 0.1, 1)
+plt.figure()
+for g in Gamma:
+    img_cls = cls_filter(img, H, g)
+    plt.subplot(2, 2, Gamma.index(g)+1)
+    plt.imshow(img_cls, cmap='gray',vmin=0,vmax=255)
+    plt.axis('off')
+    plt.title(f'Gamma={g:.1e}')
+plt.savefig(f'out/{test_image[0]}_cls.png', bbox_inches='tight')
+plt.show()

@@ -65,3 +65,4 @@ def select_roi(image):
 
     cv2.destroyAllWindows()
     return rect
+
