@@ -387,6 +387,27 @@ H_mb = np.sum(np.exp(-1j*2*np.pi*M*t) * delta_t,axis=0)
 
 `H_mb` is the motion blur filter we want to derive.
 
+And the code for constrained least squares filtering is shown below:
+
+```python
+def cls_filter(img, H, gamma):
+    img_fft = np.fft.fftshift(np.fft.fft2(img))
+    p = np.array([[0,-1,0],[-1,4,-1],[0,-1,0]])
+    p = np.pad(p, ((0, img.shape[0]-3), (0, img.shape[1]-3)), mode='constant', constant_values=0)
+    p = np.roll(p, shift=-1,axis=0)
+    p = np.roll(p, shift=-1,axis=1)
+    P = np.fft.fftshift(np.fft.fft2(p))
+    H_conj = np.conj(H)
+    P_2 = P * np.conj(P)
+    H_2 = H * H_conj
+    Y = (H_conj / (H_2 + gamma * P_2)) * img_fft
+    y = np.real(np.fft.ifft2(np.fft.ifftshift(Y)))
+    y = regulate(y)
+    return y
+```
+
+
+
 # Results
 
 ## Removing Salt and Pepper Noise (and Gaussian Noise)
@@ -419,9 +440,11 @@ Specifically, the ROI selected (in white box) to estimate the noise variance is 
 
 ## Restoring Atmospheric Turbulence
 
-For `Q6_2.tif`, the direct inverse filtering result (regulated to 0~255) is shown in Figure todo.
+For `Q6_2.tif`, the direct inverse filtering result (regulated to 0~255) is shown in Figure todo. In which, the degradation function in frequency domain is shown in Figure todo.
 
 ![Q6_2_restore_direct](./assets/Q6_2_restore_direct.png)
+
+![Q6_2_degradation](./assets/Q6_2_degradation.png)
 
 The range of the original pixel values (not regulated) after filtering is 
 
@@ -459,4 +482,18 @@ For `Q6_3_1.tif`, I use Wiener filter to restore, the result is shown in Figure 
 
 ![Q6_3_1_restore_wiener](./assets/Q6_3_1_restore_wiener.png)
 
-For `Q6_3_2.tif` and `Q6_3_3.tif` which are strongly distorted by Gaussian noise, I cannot produce a satisfactory result using Wiener filtering, 
+For `Q6_3_2.tif` and `Q6_3_3.tif`, which are strongly distorted by Gaussian noise, I cannot produce a satisfactory result using Wiener filtering, even trying a lot of hyperparameters $K$s. Thus, I resorted to constrained least squares filtering, with different hyperparameters $\gamma$​ in the formula
+$$
+\hat{F}(u, v) = \frac{H^*(u, v) G(u, v)}{|H(u, v)|^2 + \gamma |P(u, v)|^2}
+$$
+The results is shown in Figure todo and todo.
+
+![Q6_3_2_cls](./assets/Q6_3_2_cls.png)
+
+![Q6_3_3_cls](./assets/Q6_3_3_cls.png)
+
+Also, when $\gamma$ is small, the result is more like fully inverse filtering, and when $\gamma$ is large, the result is more like low-pass filtering.
+
+# Conclusion
+
+In this paper, we explored various methods for image restoration, addressing challenges posed by different types of noise and degradation functions. Our experiments demonstrated that while traditional filters like the median and adaptive median are effective against salt and pepper noise, more sophisticated techniques such as adaptive mean filtering, inverse filtering, Wiener filtering, and constrained least squares filtering are required to tackle complex degradations like Gaussian noise, atmospheric turbulence, and motion blur. In our lab experiments, we successfully restored degraded images using various methods: Median and adaptive median filters effectively restored images with salt and pepper noise; a combination of adaptive median and adaptive mean filters addressed images degraded by both salt and pepper and Gaussian noise; for complex issues like atmospheric turbulence or motion blur, we modeled the degradation function and then employed inverse filtering, Wiener filtering, or constrained least squares filtering for effective restoration. In addition, we also prove that full inverse filtering added with a constant can greatly improve the restoration performance and produce comparable results with Wiener filtering.
