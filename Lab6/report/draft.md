@@ -187,4 +187,6 @@ The experiments are generally divided into three parts. The first part deals wit
 
 ## Removing Salt and Pepper Noise (and Gaussian Noise)
 
-For 
+For `Q6_1_1.tif` (Figure todo) and `Q6_1_2.tif` (Figure todo), the images are distorted by pepper noise and salt noise, respectively. Thus, the median filter is capable of removing such noise. For `Q6_1_3.tif` (Figure todo), the image is distorted by both salt and pepper noise, and the probability of the noise's appearance is high. Thus, simply using a median filter is not enough because, within the window of the median filter, we are likely to encounter the case that the median value is exactly an impulse. However, using a large window in the median filter can also degrade the image by assigning a pixel with a median value that is far from itself. In this case, we use an adaptive median filter to handle it. For `Q6_1_4.tif` (Figure todo), the image is not only degraded by salt and pepper noise but also by Gaussian noise. When handling this situation, we need to combine two strategies to divide and conquer it. Firstly, an adaptive median filter can remove the impulse noises. Secondly, to preserve the texture of the image, we do not use a mean filter; instead, we use an adaptive mean filter, which does not blur the texture information in the image.
+
+The hardest
