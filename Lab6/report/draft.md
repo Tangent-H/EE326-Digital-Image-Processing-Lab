@@ -181,7 +181,7 @@ Here:
   p(x,y)=\begin{bmatrix}0&-1&0\\-1&4&-1\\0&-1&0\end{bmatrix}
   $$
 
-# Experiments
+# Experiments Setup
 
 The experiments are generally divided into three parts. The first part deals with images degraded by salt and pepper noise and Gaussian noise. The second part deals with images degraded by atmospheric turbulence. The final part deals with images degraded by motion blur and Gaussian noise.
 
@@ -189,4 +189,274 @@ The experiments are generally divided into three parts. The first part deals wit
 
 For `Q6_1_1.tif` (Figure todo) and `Q6_1_2.tif` (Figure todo), the images are distorted by pepper noise and salt noise, respectively. Thus, the median filter is capable of removing such noise. For `Q6_1_3.tif` (Figure todo), the image is distorted by both salt and pepper noise, and the probability of the noise's appearance is high. Thus, simply using a median filter is not enough because, within the window of the median filter, we are likely to encounter the case that the median value is exactly an impulse. However, using a large window in the median filter can also degrade the image by assigning a pixel with a median value that is far from itself. In this case, we use an adaptive median filter to handle it. For `Q6_1_4.tif` (Figure todo), the image is not only degraded by salt and pepper noise but also by Gaussian noise. When handling this situation, we need to combine two strategies to divide and conquer it. Firstly, an adaptive median filter can remove the impulse noises. Secondly, to preserve the texture of the image, we do not use a mean filter; instead, we use an adaptive mean filter, which does not blur the texture information in the image.
 
-The hardest
+The pseudo-code for the adaptive median filter is shown below:
+
+todo
+
+According to the pseudo code, we can write the Python code as follows:
+```python
+def adaptive_median_filter(input_image, size_max):
+    output_image = np.zeros(input_image.shape, dtype=input_image.dtype)
+    temp = np.pad(input_image, size_max//2, mode='reflect')
+    for i in range(input_image.shape[0]):
+        for j in range(input_image.shape[1]):
+            size = 3
+            while size <= size_max:
+                # get the window
+                offset = size_max//2 - size//2
+                window = temp[i+offset:i+offset+size, j+offset:j+offset+size]
+                # calculate the params
+                zmin = np.min(window)
+                zmax = np.max(window)
+                zmed = np.median(window)
+                zxy = input_image[i, j].astype(np.int32)
+
+                A1 = zmed - zmin
+                A2 = zmed - zmax
+                # check if the median pixel is impulse noise
+                if A1 > 0 and A2 < 0:
+                    B1 = zxy - zmin
+                    B2 = zxy - zmax
+                    if B1 > 0 and B2 < 0:
+                        output_image[i, j] = zxy
+                        break
+                    else:
+                        output_image[i, j] = zmed
+                        break
+                else:
+                    size += 2
+                    continue
+    return output_image
+```
+
+As for the median filter and adaptive mean filter, we can easily derive them according to definition; the code for them is shown below:
+
+```python
+def median_filter(input_image, n_size):
+    '''
+    flipping the image at the edges would produce better results
+    '''
+    # padding, and ensure n_size is odd
+    if n_size % 2 == 0:
+        n_size += 1
+    temp = np.pad(input_image, n_size//2, mode='reflect')
+
+    output_image = np.zeros(input_image.shape, dtype=input_image.dtype)
+
+    for i in range(input_image.shape[0]):
+        for j in range(input_image.shape[1]):
+            output_image[i, j] = np.median(temp[i:i+n_size, j:j+n_size])
+    return output_image
+
+def adaptive_mean_filter(input_image, noise_var, n_size):
+    output_image = np.zeros(input_image.shape, dtype=input_image.dtype)
+    temp = np.pad(input_image, n_size//2, mode='reflect')
+    for i in range(input_image.shape[0]):
+        for j in range(input_image.shape[1]):
+            window = temp[i:i+n_size, j:j+n_size]
+            window_var = np.var(window)
+            output_image[i, j] = input_image[i, j] - (noise_var/window_var) * (input_image[i, j] - np.mean(window))
+    return output_image
+
+```
+
+Note that obtaining the variance of noise in the adaptive mean filter requires us to select a region of interest (ROI) that mainly contains noise. In order to ease this process, I wrote a function to display a window showing the full image; then the user can use the mouse to frame the ROI, in which we approximate the noise variance as the pixels’ variance. The function is shown below:
+
+```python
+def select_roi(image):
+    """
+    Display an image and let the user draw a rectangle on the image.
+    Return the coordinates of the rectangle corners.
+    
+    Args:
+    image (numpy array): The image to display in grayscale.
+    
+    Returns:
+    tuple: Coordinates of the rectangle (x1, y1, x2, y2).
+    """
+    # Initial rectangle coordinates
+    rect = (0, 0, 1, 1)
+    drawing = False
+
+    def on_mouse(event, x, y, flags, param):
+        nonlocal rect, drawing
+        if event == cv2.EVENT_LBUTTONDOWN:
+            rect = (x, y, x, y)
+            drawing = True
+        elif event == cv2.EVENT_MOUSEMOVE and drawing:
+            rect = (rect[0], rect[1], x, y)
+        elif event == cv2.EVENT_LBUTTONUP:
+            rect = (rect[0], rect[1], x, y)
+            drawing = False
+
+    cv2.namedWindow('Select ROI')
+    cv2.setMouseCallback('Select ROI', on_mouse)
+    
+    while True:
+        img_copy = image.copy()
+        if rect[2] - rect[0] > 0 and rect[3] - rect[1] > 0:
+            cv2.rectangle(img_copy, (rect[0], rect[1]), (rect[2], rect[3]), (255, 0, 0), 2)
+        cv2.imshow('Select ROI', img_copy)
+        if cv2.waitKey(1) & 0xFF == 13:  # Press ENTER to exit
+            break
+
+    cv2.destroyAllWindows()
+    return rect
+```
+
+
+
+## Restoring Atmospheric Turbulence
+
+`Q6_2` (Figure todo) is distorted by atmospheric turbulence. To restore it, we can either use full inverse filtering, radially limited inverse filtering, or Wiener filtering. 
+
+Although the frequency response of atmospheric turbulence is
+$$
+H(u,v)=e^{-k(u^2+v^2)^{5/6}}
+$$
+In code writing, we need to realize that the above frequency response considers the origin to be at the center of the image. To eliminate the effect of centering, we need to either perform `fftshift` and `ifftshift` to the image or calculate $H$ in another approach. In my code, I use the latter one as shown below:
+
+```python
+H = np.zeros(img_fft.shape, dtype=img_fft.dtype)
+u_center = img_fft.shape[0]/2
+v_center = img_fft.shape[1]/2
+for u in range(img_fft.shape[0]):
+    for v in range(img_fft.shape[1]):
+        H[u, v] = np.exp(-0.0025*((u-u_center)**2+(v-v_center)**2)**(5/6))
+```
+
+Note that `k=0.0025` in this case, as shown in the code.
+
+After obtaining the filter, performing Wiener filtering is relatively easy:
+
+```python
+def wiener(img_fft, H, K):
+    H_abs_2 = np.abs(H)**2
+    Y_img = (H_abs_2/H/(H_abs_2+K)) * img_fft
+    return Y_img
+```
+
+And radially limited inverse filtering is full inverse filter times a Butterworth lowpass filter. For simplicity, the code is not shown in this report.
+
+**Alternative method:**
+
+Although we have previously known that full inverse filtering usually cannot provide a satisfactory result, does it mean full inverse filtering is of no use at all? Of course not. The reason for its bad performance is due to the small value of noise divided by a close-to-zero value in the filter. To avoid this, I simply add a tiny constant (in this case $0.01$) to the denominator as shown below:
+
+```python
+img_fft_restore = np.fft.ifftshift(img_fft / (H + 1e-2))
+```
+
+
+
+## Restoring Motion Blurred Images
+
+`Q6_3_1.tif`., `Q6_3_2.tif`, and `Q6_3_3.tif` are distorted by motion blur, and they are distorted to varying degrees by Gaussian noise. In this case, we need to first derive the motion blur filter, then apply Wiener filtering and constrained least squares filtering.
+
+Deriving the motion blur filter has two method, one of the method is directly use the conclusion from the previous part, that is:
+$$
+H(u,v)=\frac{T}{\pi(u a+v b)}\sin[\pi(u a+v b)]e^{-j\pi(u a+v b)} 
+$$
+The corresponding code is:
+
+```python
+def get_motion_blur_filter(img_shape, a, b, T, epsilon=1e-10):
+    uu, vv = np.ogrid[1:img_shape[0]+1, 1:img_shape[1]+1]
+    D = uu * a + vv * b + epsilon
+    H = T / (np.pi * D) * np.sin(np.pi * D) * np.exp(-1j * np.pi * D)
+    return H
+```
+
+Note that since $H$ has a denominator part, we need to ensure that it won’t suffer from divided-by-zero error, so adding a `epsilon` term which is a small number is necessary.
+
+Another method is derive the integral using numeric method, I have also done this as an extension.
+
+The code is optimize in order to utilize matrix operation to calculate integration as shown below:
+
+```python
+vx = 0.1
+vy = 0.1
+delta_t = 1e-2
+step = 1/delta_t
+uu, vv = np.ogrid[0:test_image.shape[0], 0:test_image.shape[1]]
+M = uu * vx + vv * vy
+M = M[np.newaxis, :, :]
+t = np.arange(0, 1, delta_t)
+t = t[:, np.newaxis, np.newaxis]
+H_mb = np.sum(np.exp(-1j*2*np.pi*M*t) * delta_t,axis=0)
+```
+
+`H_mb` is the motion blur filter we want to derive.
+
+# Results
+
+## Removing Salt and Pepper Noise (and Gaussian Noise)
+
+For `Q6_1_1.tif` and `Q6_1_2.tif`, simply applying median filter is enough, the result is shown in Figure todo and Figure todo. Since the filter need to process the pixel one by one, the time complexity of the algorithm is $O(n)$ where $n$ is the number of pixels. And the storage consumption do not scale linearly (although I need to save a copy of the original image, but I guess `numpy` use soft copy instead of hard copy in this case), thus, the space complexity is $O(1)$​.
+
+![Q6_1_1_median](./assets/Q6_1_1_median.png)
+
+![Q6_1_2_median](./assets/Q6_1_2_median-1715172499185-2.png)
+
+`Q6_1_3.tif` is restored by the adaptive median filter, as shown in Figure todo. The adaptive median filter also traverses through each pixel, so it also has a time complexity of $O(n)$​. However, since it may enlarge the window when processing, the time complexity should be greater than that of the median filter. As for the space complexity, the adaptive median filter needs to store several values like the minimum, maximum, and median value within the window, but that does not scale as the input image gets larger, so the space complexity is also $O(1)$.
+
+![Q6_1_3_adaptive_median](./assets/Q6_1_3_adaptive_median.png)
+
+Because the noise density of `Q6_1_3.tif` is too high, applying the median filter is not good enough, as shown in Figure todo.
+
+![Q6_1_3_median](./assets/Q6_1_3_median.png)
+
+For `Q6_1_4.tif`, I first apply adaptive median filter to remove the impulse noise (Figure todo), then apply the adaptive mean filter to remove the Gaussian noise (Figure todo).
+
+![Q6_1_4_adaptive_median](./assets/Q6_1_4_adaptive_median.png)
+
+![Q6_1_4_adaptive_mean](./assets/Q6_1_4_adaptive_mean-1715173943125-13.png)
+
+Specifically, the ROI selected (in white box) to estimate the noise variance is shown in Figure todo and todo.
+
+![selectROI](./assets/selectROI.png)
+
+![Q6_1_4_roi](./assets/Q6_1_4_roi.png)
+
+## Restoring Atmospheric Turbulence
+
+For `Q6_2.tif`, the direct inverse filtering result (regulated to 0~255) is shown in Figure todo.
+
+![Q6_2_restore_direct](./assets/Q6_2_restore_direct.png)
+
+The range of the original pixel values (not regulated) after filtering is 
+
+```python
+Max: 1.3185487450217516e+16, Min: -1.3170810031765624e+16
+```
+
+which shows that the noise is greatly magnified by this filter.
+
+However, if we do a little bit, adding a constant $0.01$ to the filter like this, we can obtain a clean and clear restored image (Figure todo).
+
+![Q6_2_restore](./assets/Q6_2_restore.png)
+
+The time complexity of the filter is $O(n)$, because I calculate the inverse filter value one by one. But the time complexity can be easily decreased to 𝑂(1) if we utilize the broadcasting mechanism in `numpy`, which can avoid a double `for` loop.
+
+Another way to avoid the defect of inverse filtering is by using radially limited inverse filtering, however, since Butterworth filter is introduced, we can expect that, if the cut off frequency is too low, the image is further blurred instead of restored, and if the cut off frequency is too high, the defect in inverse filtering will also appear. The result in Figure todo verified this analysis, where $D0$ is the cut off radius.
+
+![Q6_2_restore_butterworth](./assets/Q6_2_restore_butterworth.png)
+
+The final and also the best approach I made to restore this image is using Wiener filtering. The result is shown in Figure todo. $K$ is the hyperparameter in the formula:
+$$
+\hat{F}(u,v)=\left[\frac1{H(u,v)}\frac{|H(u,v)|^2}{|H(u,v)|^2+K}\right]G(u,v)
+$$
+When $K$ approaches zero, the Wiener filter appears more like a full inverse filter, and when 𝐾 gets larger, the Wiener filter appears more like a lowpass filter.
+
+![Q6_2_restore_wiener](./assets/Q6_2_restore_wiener.png)
+
+If we compare the result obtained by adding a small constant in full inverse filtering and the Wiener filter with $K=1.0e-04$ as shown in Figure to do, we can notice that the Wiener filter showcases less ring effect.
+
+![Q6_2_compare](./assets/Q6_2_compare.png)
+
+## Restoring Motion Blurred Images
+
+For `Q6_3_1.tif`, I use Wiener filter to restore, the result is shown in Figure todo.
+
+![Q6_3_1_restore_wiener](./assets/Q6_3_1_restore_wiener.png)
+
+For `Q6_3_2.tif` and `Q6_3_3.tif` which are strongly distorted by Gaussian noise, I cannot produce a satisfactory result using Wiener filtering, 

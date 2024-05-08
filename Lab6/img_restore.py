@@ -196,7 +196,7 @@ img_ad = adaptive_median_filter(img,11)
 img_alpha = alpha_trimmed_mean_filter(img_ad, 3, 4)
 plt.figure()
 plt.subplot(1, 2, 1)
-plt.imshow(img, cmap='gray',vmin=0,vmax=255)
+plt.imshow(img_ad, cmap='gray',vmin=0,vmax=255)
 plt.title('Original')
 plt.axis('off')
 plt.subplot(1, 2, 2)
@@ -285,17 +285,19 @@ plt.show()
 # Wiener filtering
 plt.figure()
 img_wieners = []
-for i in range(6):
-    K = 1e-4*i
+k = [1, 1e-1, 1e-4, 1e-6, 1e-7, 1e-10]
+i = 0
+for K in k:
     img_fft_wiener = wiener(img_fft, H, K)
     img_wieners.append(np.real(np.fft.ifft2(np.fft.ifftshift(img_fft_wiener))))
     print(f"Max: {np.max(img_wieners[i])}, Min: {np.min(img_wieners[i])}")
     img_wiener = np.clip(img_wieners[i], 0, 255).astype(np.uint8)
     plt.subplot(2, 3, i+1)
     plt.imshow(img_wiener, cmap='gray',vmin=0,vmax=255)
-    plt.title(f'K={K:.4f}')
+    plt.title(f'K={K:.1e}')
     plt.axis('off')
     print(f"K={K}")
+    i += 1
 plt.savefig(f'out/{test_image}_restore_wiener.png', bbox_inches='tight')
 plt.show()
 
@@ -306,7 +308,7 @@ plt.title('Full Inverse Filtering plus 0.01')
 plt.axis('off')
 plt.subplot(1, 2, 2)
 plt.imshow(img_wieners[2], cmap='gray',vmin=0,vmax=255)
-plt.title('Wiener Filtering 0.0003')
+plt.title('Wiener Filtering K=1e-4')
 plt.axis('off')
 plt.savefig(f'out/{test_image}_compare.png', bbox_inches='tight')
 plt.show()
@@ -445,5 +447,5 @@ for g in Gamma:
     plt.imshow(img_cls, cmap='gray',vmin=0,vmax=255)
     plt.axis('off')
     plt.title(f'Gamma={g:.1e}')
-plt.savefig(f'out/{test_image[0]}_cls.png', bbox_inches='tight')
+plt.savefig(f'out/{test_image[1]}_cls.png', bbox_inches='tight')
 plt.show()
