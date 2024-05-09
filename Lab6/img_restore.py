@@ -105,7 +105,7 @@ def wiener(img_fft, H, K):
 #     return T/(np.pi*(uu*a+vv*b+epsilon))*np.sin(np.pi*(uu*a+vv*b))*np.exp(-1j*np.pi*(uu*a+vv*b))
 
 def get_motion_blur_filter(img_shape, a, b, T, epsilon=1e-10):
-    uu, vv = np.ogrid[1:img_shape[0]+1, 1:img_shape[1]+1]
+    uu, vv = np.ogrid[-img_shape[0]//2:img_shape[0]//2, -img_shape[1]//2:img_shape[1]//2]
     # uu, vv = np.ogrid[0:img_shape[0], 0:img_shape[1]]
     # m, n = img.shape
     # uu, vv = np.meshgrid(np.linspace(1, m, m), np.linspace(1, n, n))
@@ -362,11 +362,11 @@ plt.axis('off')
 plt.show()
 
 img = test_image
-img_fft = np.fft.fft2(img)
-# img_fft = np.fft.fftshift(np.fft.fft2(img))
+# img_fft = np.fft.fft2(img)
+img_fft = np.fft.fftshift(np.fft.fft2(img))
 img_mb_fft = img_fft * H_mb
-img_mb = np.real(np.fft.ifft2(img_mb_fft))
-# img_mb = np.real(np.fft.ifft2(np.fft.ifftshift(img_mb_fft)))
+# img_mb = np.real(np.fft.ifft2(img_mb_fft))
+img_mb = np.real(np.fft.ifft2(np.fft.ifftshift(img_mb_fft)))
 img_mb = regulate(img_mb)
 plt.figure()
 plt.subplot(1, 2, 1)
@@ -449,3 +449,11 @@ for g in Gamma:
     plt.title(f'Gamma={g:.1e}')
 plt.savefig(f'out/{test_image[1]}_cls.png', bbox_inches='tight')
 plt.show()
+
+
+### Special Notes:
+# Anything regarding the frequency domain filtering, the origin of the 
+# Fourier transform is always at the center of the image, 
+# not at the top-left corner of the image.
+# When we calcualte the filter,
+# the u, v contains negative and positive values
